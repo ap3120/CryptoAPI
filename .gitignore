@@ -1,0 +1,11 @@
+# Build
+target/
+.project
+.classpath
+.settings/
+
+# Evironment variables
+.env
+
+# Vim
+*.swp
