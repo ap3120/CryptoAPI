@@ -18,11 +18,17 @@ import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.telegram.telegrambots.meta.TelegramBotsApi;
+import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
+import org.telegram.telegrambots.meta.exceptions.TelegramApiRequestException;
+import org.telegram.telegrambots.meta.generics.LongPollingBot;
+import org.telegram.telegrambots.updatesreceivers.DefaultBotSession;
+
 public class App {
     
     public static void main( String[] args ) {
         
-        Dotenv dotenv = Dotenv.load();
+        /*Dotenv dotenv = Dotenv.load();
         String API_KEY = dotenv.get("API_KEY");
         
         String uri = "https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest";
@@ -38,6 +44,16 @@ public class App {
             System.out.println("Error: cannont access content - " + e.toString());
         } catch (URISyntaxException e) {
             System.out.println("Error: Invalid URL " + e.toString());
+        }*/
+        
+        //ApiContextInitializer.init();
+        try {
+            TelegramBotsApi telegramBotsApi = new TelegramBotsApi(DefaultBotSession.class);
+            telegramBotsApi.registerBot(new Bot());
+        /*} catch (TelegramApiRequestException e) {
+            e.printStackTrace();*/
+        } catch (TelegramApiException e) {
+            e.printStackTrace();
         }
     }
 
