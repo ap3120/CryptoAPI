@@ -46,25 +46,28 @@ public class App {
             TelegramBotsApi telegramBotsApi = new TelegramBotsApi(DefaultBotSession.class);
             Bot bot = new Bot();
             telegramBotsApi.registerBot(bot);
-            try {
-                String result = makeAPICall(uri, paratmers, API_KEY);
-                String msgToSend = extractFromJson(result);
-                if (!msgToSend.isEmpty()) {
-                    bot.sendMsg(CHAT_ID, msgToSend);
+            while (true) {
+                try {
+                    String result = makeAPICall(uri, paratmers, API_KEY);
+                    String msgToSend = extractFromJson(result);
+                    if (!msgToSend.isEmpty()) {
+                        bot.sendMsg(CHAT_ID, msgToSend);
+                    }
+                    Thread.sleep(5000);
+                } catch (IOException e) {
+                    System.out.println("Error: cannont access content - " + e.toString());
+                } catch (URISyntaxException e) {
+                    System.out.println("Error: Invalid URL " + e.toString());
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
                 }
-            } catch (IOException e) {
-                System.out.println("Error: cannont access content - " + e.toString());
-            } catch (URISyntaxException e) {
-                System.out.println("Error: Invalid URL " + e.toString());
-            } catch (ParseException e) {
-                System.out.println("Error: cannot parse result - " + e.toString());
             }
         } catch (TelegramApiException e) {
             e.printStackTrace();
         }
     }
 
-    public static String extractFromJson(String result) throws ParseException {
+    public static String extractFromJson(String result) {
         try {
             JSONParser jsonParser = new JSONParser();
             JSONObject jsonResult = (JSONObject) jsonParser.parse(result);
