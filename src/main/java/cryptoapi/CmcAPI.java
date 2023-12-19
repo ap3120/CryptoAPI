@@ -35,7 +35,7 @@ public class CmcAPI {
         String uri = "https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest";
         List<NameValuePair> paratmers = new ArrayList<NameValuePair>();
         paratmers.add(new BasicNameValuePair("start","1"));
-        paratmers.add(new BasicNameValuePair("limit","200"));
+        paratmers.add(new BasicNameValuePair("limit","10"));
         paratmers.add(new BasicNameValuePair("convert","USD"));
 
         try {
