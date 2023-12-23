@@ -12,3 +12,6 @@ target/
 
 # Vim
 *.swp
+
+# Database
+subscriptions.json
