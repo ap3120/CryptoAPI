@@ -16,44 +16,47 @@ import org.apache.http.util.EntityUtils;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 import org.json.simple.JSONObject;
-import org.json.simple.JSONArray;
 
 import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
-import java.lang.Object;
 
-public class CmcAPI {
+public class CmcAPI implements Runnable {
     
     static Dotenv dotenv = Dotenv.load();
     private static final String CMC_API_KEY = dotenv.get("CMC_API_KEY");
+    private static JSONObject cmcJson;
 
-    public static JSONArray getCryptocurrency(String crypto) {
-        JSONArray jsonArray = new JSONArray();
+    @Override
+    public void run() {
+        while (true) {
+            if (Subscriptions.isJson() && !Subscriptions.isEmpty()) {
+                cmcJson = getCryptocurrency();
+            } else {
+                cmcJson = null;
+            }
+            try {
+                Thread.sleep(900_000);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }
+    }
+    public static JSONObject getCryptocurrency() {
+        JSONObject json = new JSONObject();
 
         String uri = "https://pro-api.coinmarketcap.com/v1/cryptocurrency/listings/latest";
         List<NameValuePair> paratmers = new ArrayList<NameValuePair>();
         paratmers.add(new BasicNameValuePair("start","1"));
-        paratmers.add(new BasicNameValuePair("limit","10"));
+        paratmers.add(new BasicNameValuePair("limit","200"));
         paratmers.add(new BasicNameValuePair("convert","USD"));
 
         try {
             String result = makeAPICall(uri, paratmers, CmcAPI.CMC_API_KEY);
             JSONParser jsonParser = new JSONParser();
             JSONObject jsonResult = (JSONObject) jsonParser.parse(result);
-            JSONArray jsonData = (JSONArray) jsonResult.get("data");
-            if (crypto.equals("all")) {
-                return jsonData;
-            } else {
-                for (Object data : jsonData.toArray()) {
-                    JSONObject jsonSubData = (JSONObject) data;
-                    if (jsonSubData.get("symbol").equals(crypto)) {
-                        jsonArray.add(jsonSubData);
-                        return jsonArray;
-                    }
-                }
-            }
+            json = jsonResult;
         } catch (IOException e) {
             System.out.println("Error: cannot access content - " + e.toString());
         } catch (URISyntaxException e) {
@@ -61,10 +64,11 @@ public class CmcAPI {
         } catch (ParseException e) {
             System.out.println("Error: cannot parse result - " + e.toString());
         }
-        return jsonArray;
+        return json;
     }
 
     public static String makeAPICall(String uri, List<NameValuePair> parameters, String key) throws URISyntaxException, IOException {
+        System.out.println("cmc api called");
         String response_content = "";
 
         URIBuilder query = new URIBuilder(uri);
@@ -86,7 +90,14 @@ public class CmcAPI {
         } finally {
             response.close();
         }
-
         return response_content;
+    }
+
+    public static JSONObject getCmcJson() {
+        return cmcJson;
+    }
+
+    public static void setCmcJson(JSONObject json) {
+        cmcJson = json;
     }
 }

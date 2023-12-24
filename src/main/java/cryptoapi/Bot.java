@@ -32,17 +32,21 @@ public class Bot extends TelegramLongPollingBot {
         if (update.hasMessage() && update.getMessage().hasText()) {
             SendMessage message = new SendMessage();
             message.setChatId(update.getMessage().getChatId().toString());
+            String newMessage = update.getMessage().getText();
             //ReplyKeyboardRemove replyKeyboardRemove = new ReplyKeyboardRemove();
             //replyKeyboardRemove.setRemoveKeyboard(true);
-            if (update.getMessage().getText().equals("/start")) {
+            if (newMessage.equals("/start")) {
 
-            } else if (update.getMessage().getText().equals("/cryptocurrency")) {
-                message.setText("Select a cryptocurrency.");
-                //setButtons(message);
-                setInline(message);
-            } else if (update.getMessage().getText().equals("/subscriptions")) {
+            } else if (newMessage.equals("/add")) {
+                message.setText("Select a cryptocurrency or type its name in the text area.");
+                setButtons(message, newMessage);
+            } else if (newMessage.equals("/remove")) {
 
-            } else if (update.getMessage().getText().equals("/ethgas")) {
+            } else if (newMessage.equals("/see")) {
+
+            } else if (newMessage.contains("/add/")) {
+
+            } else if (newMessage.contains("/remove/")) {
 
             }
             if (! message.getText().isEmpty()) {
@@ -53,7 +57,7 @@ public class Bot extends TelegramLongPollingBot {
                 }
             }
             //System.out.println(update.getMessage().getChatId().toString());
-        } else if (update.hasCallbackQuery()) {
+        } else if (update.hasMessage() && update.getMessage().hasText() && update.hasCallbackQuery()) {
             answerCallbackQuery(update);
         }
     }
@@ -70,35 +74,57 @@ public class Bot extends TelegramLongPollingBot {
         }
     }
 
-    public synchronized void setButtons(SendMessage sendMessage) {
+    public synchronized void setButtons(SendMessage sendMessage, String newMessage) {
         ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup();
         sendMessage.setReplyMarkup(replyKeyboardMarkup);
-        replyKeyboardMarkup.setSelective(true);
+        //replyKeyboardMarkup.setSelective(true);
         replyKeyboardMarkup.setResizeKeyboard(true);
         replyKeyboardMarkup.setOneTimeKeyboard(true);
         List<KeyboardRow> keyboard = new ArrayList<>();
-        KeyboardRow keyboardFirstRow = new KeyboardRow();
-        keyboardFirstRow.add(new KeyboardButton("Hi"));
-        KeyboardRow keyboardSecondRow = new KeyboardRow();
-        keyboardSecondRow.add(new KeyboardButton("Help"));
-        keyboard.add(keyboardFirstRow);
-        keyboard.add(keyboardSecondRow);
+        KeyboardRow row = new KeyboardRow();
+
+        if (newMessage.equals("/add")) {
+            JSONObject allCryptocurrencies = CmcAPI.getCmcJson();
+            if (allCryptocurrencies == null) {
+                allCryptocurrencies = CmcAPI.getCryptocurrency();
+                CmcAPI.setCmcJson(allCryptocurrencies);
+            }
+            JSONArray data = (JSONArray) allCryptocurrencies.get("data");
+            for (int i=0; i<data.size(); i++) {
+                JSONObject jsonCryptocurrency = (JSONObject) data.get(i);
+                row.add(new KeyboardButton(jsonCryptocurrency.get("symbol").toString()));
+                if (i % 5 == 0 && i > 0) {
+                    keyboard.add(row);
+                    row = new KeyboardRow();
+                }
+            }
+            keyboard.add(row);
+        }
         replyKeyboardMarkup.setKeyboard(keyboard);
     }
 
     private void setInline(SendMessage message) {
         List<List<InlineKeyboardButton>> buttons = new ArrayList<>();
-        List<InlineKeyboardButton> buttons1 = new ArrayList<>();
+        List<InlineKeyboardButton> row = new ArrayList<>();
 
-        JSONArray allCryptocurrencies = CmcAPI.getCryptocurrency("all");
-        for (Object cryptocurrency : allCryptocurrencies.toArray()) {
-            JSONObject jsonCryptocurrency = (JSONObject) cryptocurrency;
+        JSONObject allCryptocurrencies = CmcAPI.getCmcJson();
+        if (allCryptocurrencies == null) {
+            allCryptocurrencies = CmcAPI.getCryptocurrency();
+            CmcAPI.setCmcJson(allCryptocurrencies);
+        }
+        JSONArray data = (JSONArray) allCryptocurrencies.get("data");
+        for (int i=0; i<data.size(); i++) {
+            JSONObject jsonCryptocurrency = (JSONObject) data.get(i);
+            if (i % 5 == 0 && i > 0) {
+                buttons.add(row);
+                row = new ArrayList<>();
+            }
             InlineKeyboardButton inlineKeyboardButton = new InlineKeyboardButton();
             inlineKeyboardButton.setText(jsonCryptocurrency.get("symbol").toString());
-            inlineKeyboardButton.setCallbackData(jsonCryptocurrency.get("symbol").toString());
-            buttons1.add(inlineKeyboardButton);
+            inlineKeyboardButton.setCallbackData("add/" + jsonCryptocurrency.get("symbol").toString());
+            row.add(inlineKeyboardButton);
         }
-        buttons.add(buttons1);
+        buttons.add(row);
 
         InlineKeyboardMarkup markupKeyboard = new InlineKeyboardMarkup();
         markupKeyboard.setKeyboard(buttons);
@@ -110,8 +136,13 @@ public class Bot extends TelegramLongPollingBot {
         long message_id = update.getCallbackQuery().getMessage().getMessageId();
         long chat_id = update.getCallbackQuery().getMessage().getChatId();
 
-        JSONArray allCryptocurrencies = CmcAPI.getCryptocurrency("all");
-        for (Object cryptocurrency : allCryptocurrencies.toArray()) {
+        JSONObject allCryptocurrencies = CmcAPI.getCmcJson();
+        if (allCryptocurrencies == null) {
+            allCryptocurrencies = CmcAPI.getCryptocurrency();
+            CmcAPI.setCmcJson(allCryptocurrencies);
+        }
+        JSONArray data = (JSONArray) allCryptocurrencies.get("data");
+        for (Object cryptocurrency : data.toArray()) {
             JSONObject jsonCryptocurrency = (JSONObject) cryptocurrency;
             if (call_data.equals(jsonCryptocurrency.get("symbol").toString())) {
                 JSONObject quote = (JSONObject) jsonCryptocurrency.get("quote");
@@ -129,8 +160,6 @@ public class Bot extends TelegramLongPollingBot {
                 break;
             }
         }
-
-
     }
 
     @Override
