@@ -6,12 +6,8 @@ import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
-import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText;
 import org.telegram.telegrambots.meta.api.objects.Update;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardRemove;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
@@ -20,8 +16,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.regex.Pattern;
-
-import static java.lang.Math.toIntExact;
 
 public class Bot extends TelegramLongPollingBot {
 
@@ -71,11 +65,11 @@ public class Bot extends TelegramLongPollingBot {
                 }
             } else if (chatsState.get(chatId) != null && chatsState.get(chatId).getState() instanceof AddTargetState) {
                 Chat chat = chatsState.get(chatId);
+                String request = chat.getState().getStateString();
                 chat.setState(new NoneState(""));
                 if (isTargetValid(newMessage)) {
-                    String request = chat.getState().getStateString();
                     String[] requestArray = request.split("/", 0);
-                    Subscriptions.add(chatId, requestArray[1], requestArray[2], requestArray[3]);
+                    Subscriptions.add(chatId, requestArray[2], requestArray[3], newMessage);
                 } else {
                     message.setText("The target must be a number.");
                 }
@@ -136,7 +130,7 @@ public class Bot extends TelegramLongPollingBot {
     public synchronized void setButtons(SendMessage sendMessage, String newMessage, String chatId) {
         ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup();
         sendMessage.setReplyMarkup(replyKeyboardMarkup);
-        //replyKeyboardMarkup.setSelective(true);
+        replyKeyboardMarkup.setSelective(true);
         replyKeyboardMarkup.setResizeKeyboard(true);
         replyKeyboardMarkup.setOneTimeKeyboard(true);
         List<KeyboardRow> keyboard = new ArrayList<>();
