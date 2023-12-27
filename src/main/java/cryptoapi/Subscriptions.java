@@ -10,7 +10,7 @@ import java.nio.file.Path;
 
 public class Subscriptions {
 
-    public static void add(String chatId, String symbol, String type, String target) {
+    public static String add(String chatId, String symbol, String type, String target) {
         JSONObject json = new JSONObject();
         JSONArray data = new JSONArray();
         JSONObject chat = new JSONObject();
@@ -43,12 +43,12 @@ public class Subscriptions {
                                 JSONObject tmpUsd = (JSONObject) tmpChatSubscription.get("USD");
                                 tmpUsd.put(type, target);
                                 writeJsonFile(tmpJson);
-                                return;
+                                return "Your subscription for /" + symbol + "/" + type + "/" + target + " was successfully saved.";
                             }
                         }
                         tmpChatSubscriptions.add(chatSubscription);
                         writeJsonFile(tmpJson);
-                        return;
+                        return "Your subscription for /" + symbol + "/" + type + "/" + target + " was successfully saved.";
                     }
                 }
                 tmpData.add(chat);
@@ -56,8 +56,9 @@ public class Subscriptions {
             } else {
                 writeJsonFile(json);
             }
+            return "Your subscription for /" + symbol + "/" + type + "/" + target + " was successfully saved.";
         } catch (ParseException e) {
-            throw new RuntimeException(e);
+            return "Something went wrong...";
         }
     }
 

@@ -4,6 +4,8 @@ import io.github.cdimascio.dotenv.Dotenv;
 
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+import org.json.simple.parser.ParseException;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
@@ -27,11 +29,15 @@ public class Bot extends TelegramLongPollingBot {
     public void onUpdateReceived(Update update) {
         if (update.hasMessage() && update.getMessage().hasText()) {
             SendMessage message = new SendMessage();
+            message.enableHtml(true);
             message.setChatId(update.getMessage().getChatId().toString());
             String newMessage = update.getMessage().getText();
             String chatId = update.getMessage().getChatId().toString();
             if (newMessage.equals("/start")) {
-
+                StringBuilder introductionMessage = new StringBuilder();
+                introductionMessage.append("Hello I'm <b>Neuneu_bot</b> 🪲, you can use me to receive alerts on the Crypto market!\n\n"); // U+1FAB2
+                introductionMessage.append("/add : add a subscription\n/remove : remove a subscription\n/view : view your subscriptions");
+                message.setText(introductionMessage.toString());
             } else if (newMessage.equals("/add")) {
                 message.setText("Select a cryptocurrency or type its name in the text area.");
                 setButtons(message, newMessage, chatId);
@@ -40,8 +46,38 @@ public class Bot extends TelegramLongPollingBot {
                 chatsState.put(chatId, chat);
             } else if (newMessage.equals("/remove")) {
 
-            } else if (newMessage.equals("/see")) {
-
+            } else if (newMessage.equals("/view")) {
+                message.setText("You don't have any subscription.");
+                if (! Subscriptions.isEmpty() && Subscriptions.isJson()) {
+                    String jsonContent = Subscriptions.getJsonContent();
+                    JSONParser jsonParser = new JSONParser();
+                    try {
+                        JSONObject allSubscriptions = (JSONObject) jsonParser.parse(jsonContent);
+                        JSONArray data = (JSONArray) allSubscriptions.get("data");
+                        for (int i=0; i<data.size(); i++) {
+                            JSONObject subscriptions = (JSONObject) data.get(i);
+                            if (subscriptions.get("chatId").toString().equals(chatId)) {
+                                JSONArray subscriptionsArray = (JSONArray) subscriptions.get("subscriptions");
+                                if (subscriptionsArray.size() > 0) {
+                                    StringBuilder subscriptionsMessage = new StringBuilder();
+                                    subscriptionsMessage.append("<b>Your subscriptions 🔔:</b>\n\n"); // U+1F514
+                                    for (int j=0; j<subscriptionsArray.size(); j++) {
+                                        JSONObject tokenSubscription = (JSONObject) subscriptionsArray.get(j);
+                                        subscriptionsMessage.append("<b>" + tokenSubscription.get("symbol").toString() + ":</b>\n");
+                                        JSONObject usd = (JSONObject) tokenSubscription.get("USD");
+                                        usd.keySet().forEach(key -> {
+                                            subscriptionsMessage.append(key.toString() + ": $ " + usd.get(key).toString() + "\n");
+                                        });
+                                        subscriptionsMessage.append("\n");
+                                    }
+                                    message.setText(subscriptionsMessage.toString());
+                                }
+                            }
+                        }
+                    } catch (ParseException e) {
+                        message.setText("Sorry, something went wrong...");
+                    }
+                }
             } else if (chatsState.get(chatId) != null && chatsState.get(chatId).getState() instanceof AddCoinState) {
                 if (isCryptoInArray(newMessage)) {
                     message.setText("Select the quote.");
@@ -69,7 +105,7 @@ public class Bot extends TelegramLongPollingBot {
                 chat.setState(new NoneState(""));
                 if (isTargetValid(newMessage)) {
                     String[] requestArray = request.split("/", 0);
-                    Subscriptions.add(chatId, requestArray[2], requestArray[3], newMessage);
+                    message.setText(Subscriptions.add(chatId, requestArray[2], requestArray[3], newMessage));
                 } else {
                     message.setText("The target must be a number.");
                 }
