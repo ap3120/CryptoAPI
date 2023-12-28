@@ -40,12 +40,12 @@ public class Subscriptions {
                             JSONObject tmpUsd = (JSONObject) tmpChatSubscription.get("USD");
                             tmpUsd.put(type, target);
                             writeJsonFile(tmpJson);
-                            return "Your subscription for /" + symbol + "/" + type + "/" + target + " was successfully saved.";
+                            break;
                         }
                     }
                     tmpChatSubscriptions.add(chatSubscription);
                     writeJsonFile(tmpJson);
-                    return "Your subscription for /" + symbol + "/" + type + "/" + target + " was successfully saved.";
+                    break;
                 }
             }
             tmpData.add(chat);
@@ -53,7 +53,7 @@ public class Subscriptions {
         } else {
             writeJsonFile(json);
         }
-        return "Your subscription for /" + symbol + "/" + type + "/" + target + " was successfully saved.";
+        return "Your subscription was saved. You will get an alert when " + symbol + " reaches a " + type + " of $ " + target;
     }
 
     public static String remove(String chatId, String symbol, String type) {

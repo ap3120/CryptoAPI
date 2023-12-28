@@ -13,6 +13,7 @@ import org.apache.http.impl.client.HttpClients;
 import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.util.EntityUtils;
 
+import org.json.simple.JSONArray;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 import org.json.simple.JSONObject;
@@ -21,25 +22,64 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.List;
+import java.lang.*;
 
 public class CmcAPI implements Runnable {
     
     static Dotenv dotenv = Dotenv.load();
     private static final String CMC_API_KEY = dotenv.get("CMC_API_KEY");
     private static JSONObject cmcJson;
+    private Bot bot = null;
+
+    public CmcAPI(Bot bot) {
+        this.bot = bot;
+    }
 
     @Override
     public void run() {
         while (true) {
             if (Subscriptions.isJson() && !Subscriptions.isEmpty()) {
                 cmcJson = getCryptocurrency();
+                dispatchAlerts();
             } else {
                 cmcJson = null;
             }
             try {
                 Thread.sleep(900_000);
+                //Thread.sleep(10_000);
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
+            }
+        }
+    }
+
+    private void dispatchAlerts() {
+        JSONObject allSubscriptions = Subscriptions.getJsonContent();
+        JSONArray data = (JSONArray) allSubscriptions.get("data");
+        for (Object o : data.toArray()) {
+            JSONObject chat = (JSONObject) o;
+            String chatId = chat.get("chatId").toString();
+            JSONArray subscriptions = (JSONArray) chat.get("subscriptions");
+            for (Object obj : subscriptions.toArray()) {
+                JSONObject tokenSubscriptions = (JSONObject) obj;
+                JSONArray cmcData = (JSONArray) cmcJson.get("data");
+                for (int i=0; i<cmcData.size(); i++) {
+                    JSONObject cmcToken = (JSONObject) cmcData.get(i);
+                    if (cmcToken.get("symbol").toString().equals(tokenSubscriptions.get("symbol").toString())) {
+                        JSONObject usd = (JSONObject) tokenSubscriptions.get("USD");
+                        JSONObject cmcQuote = (JSONObject) cmcToken.get("quote");
+                        JSONObject cmcUsd = (JSONObject) cmcQuote.get("USD");
+                        if (usd.get("price") != null) {
+                            double targetPrice = Double.parseDouble(usd.get("price").toString());
+                            double cmcPrice = Double.parseDouble(cmcUsd.get("price").toString());
+                            double percentChangeOneHour = Double.parseDouble(cmcUsd.get("percent_change_1h").toString());
+                            if (cmcPrice * Math.min(1, 1 - percentChangeOneHour/100) <= targetPrice && targetPrice <= cmcPrice * Math.max(1, 1 - percentChangeOneHour/100)) {
+                                String message = tokenSubscriptions.get("symbol") + " has reached the target price of $ " + usd.get("price").toString() + ".";
+                                bot.sendMsg(chatId, message); 
+                            }
+                        }
+                    }
+                }
             }
         }
     }
