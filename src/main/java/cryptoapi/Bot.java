@@ -25,6 +25,7 @@ public class Bot extends TelegramLongPollingBot {
     private static String BOT_TOKEN = dotenv.get("TELEGRAM_BOT_API");
     private static String BOT_USERNAME = dotenv.get("TELEGRAM_BOT_USERNAME");
     private static HashMap<String, Chat> chatsState = new HashMap<>();
+
     @Override
     public void onUpdateReceived(Update update) {
         if (update.hasMessage() && update.getMessage().hasText()) {
@@ -45,37 +46,35 @@ public class Bot extends TelegramLongPollingBot {
                 chat.nextState(newMessage);
                 chatsState.put(chatId, chat);
             } else if (newMessage.equals("/remove")) {
-
+                message.setText("Select the cryptocurrency you wish to remove a subscription of.");
+                setButtons(message, newMessage, chatId);
+                Chat chat = new Chat(chatId);
+                chat.nextState(newMessage);
+                chatsState.put(chatId, chat);
             } else if (newMessage.equals("/view")) {
                 message.setText("You don't have any subscription.");
-                if (! Subscriptions.isEmpty() && Subscriptions.isJson()) {
-                    String jsonContent = Subscriptions.getJsonContent();
-                    JSONParser jsonParser = new JSONParser();
-                    try {
-                        JSONObject allSubscriptions = (JSONObject) jsonParser.parse(jsonContent);
-                        JSONArray data = (JSONArray) allSubscriptions.get("data");
-                        for (int i=0; i<data.size(); i++) {
-                            JSONObject subscriptions = (JSONObject) data.get(i);
-                            if (subscriptions.get("chatId").toString().equals(chatId)) {
-                                JSONArray subscriptionsArray = (JSONArray) subscriptions.get("subscriptions");
-                                if (subscriptionsArray.size() > 0) {
-                                    StringBuilder subscriptionsMessage = new StringBuilder();
-                                    subscriptionsMessage.append("<b>Your subscriptions 🔔:</b>\n\n"); // U+1F514
-                                    for (int j=0; j<subscriptionsArray.size(); j++) {
-                                        JSONObject tokenSubscription = (JSONObject) subscriptionsArray.get(j);
-                                        subscriptionsMessage.append("<b>" + tokenSubscription.get("symbol").toString() + ":</b>\n");
-                                        JSONObject usd = (JSONObject) tokenSubscription.get("USD");
-                                        usd.keySet().forEach(key -> {
-                                            subscriptionsMessage.append(key.toString() + ": $ " + usd.get(key).toString() + "\n");
-                                        });
-                                        subscriptionsMessage.append("\n");
-                                    }
-                                    message.setText(subscriptionsMessage.toString());
+                if (!Subscriptions.isEmpty() && Subscriptions.isJson()) {
+                    JSONObject allSubscriptions = Subscriptions.getJsonContent();
+                    JSONArray data = (JSONArray) allSubscriptions.get("data");
+                    for (int i = 0; i < data.size(); i++) {
+                        JSONObject subscriptions = (JSONObject) data.get(i);
+                        if (subscriptions.get("chatId").toString().equals(chatId)) {
+                            JSONArray subscriptionsArray = (JSONArray) subscriptions.get("subscriptions");
+                            if (subscriptionsArray.size() > 0) {
+                                StringBuilder subscriptionsMessage = new StringBuilder();
+                                subscriptionsMessage.append("<b>Your subscriptions 🔔:</b>\n\n"); // U+1F514
+                                for (int j = 0; j < subscriptionsArray.size(); j++) {
+                                    JSONObject tokenSubscription = (JSONObject) subscriptionsArray.get(j);
+                                    subscriptionsMessage.append("<b>" + tokenSubscription.get("symbol").toString() + ":</b>\n");
+                                    JSONObject usd = (JSONObject) tokenSubscription.get("USD");
+                                    usd.keySet().forEach(key -> {
+                                        subscriptionsMessage.append(key.toString() + ": $ " + usd.get(key).toString() + "\n");
+                                    });
+                                    subscriptionsMessage.append("\n");
                                 }
+                                message.setText(subscriptionsMessage.toString());
                             }
                         }
-                    } catch (ParseException e) {
-                        message.setText("Sorry, something went wrong...");
                     }
                 }
             } else if (chatsState.get(chatId) != null && chatsState.get(chatId).getState() instanceof AddCoinState) {
@@ -109,8 +108,25 @@ public class Bot extends TelegramLongPollingBot {
                 } else {
                     message.setText("The target must be a number.");
                 }
+            } else if (chatsState.get(chatId) != null && chatsState.get(chatId).getState() instanceof RemoveCoinState) {
+                if (isCryptoInSubscriptions(newMessage, chatId)) {
+                    message.setText("Select the quote.");
+                    setButtons(message, newMessage, chatId);
+                    Chat chat = chatsState.get(chatId);
+                    chat.nextState("/" + newMessage);
+                } else {
+                    message.setText("You don't have any subscription for the selected token.");
+                    Chat chat = chatsState.get(chatId);
+                    chat.setState(new NoneState(""));
+                }
+            } else if (chatsState.get(chatId) != null && chatsState.get(chatId).getState() instanceof RemoveTypeState) {
+                Chat chat = chatsState.get(chatId);
+                String request = chat.getState().getStateString();
+                chat.setState(new NoneState(""));
+                String[] requestArray = request.split("/", 0);
+                message.setText(Subscriptions.remove(chatId, requestArray[2], newMessage));
             }
-            if (! message.getText().isEmpty()) {
+            if (!message.getText().isEmpty()) {
                 try {
                     execute(message); // Call method to send the message
                 } catch (TelegramApiException e) {
@@ -141,10 +157,26 @@ public class Bot extends TelegramLongPollingBot {
         return allCryptocurrencies;
     }
 
+    private boolean isCryptoInSubscriptions(String crypto, String chatId) {
+        JSONObject allSubscriptions = Subscriptions.getJsonContent();
+        JSONArray data = (JSONArray) allSubscriptions.get("data");
+        for (int i = 0; i < data.size(); i++) {
+            JSONObject chatSubscriptions = (JSONObject) data.get(i);
+            if (chatSubscriptions.get("chatId").toString().equals(chatId)) {
+                JSONArray subscriptions = (JSONArray) chatSubscriptions.get("subscriptions");
+                for (int j = 0; j < subscriptions.size(); j++) {
+                    JSONObject subscription = (JSONObject) subscriptions.get(j);
+                    if (subscription.get("symbol").toString().equals(crypto)) return true;
+                }
+            }
+        }
+        return false;
+    }
+
     private boolean isCryptoInArray(String crypto) {
         JSONObject allCryptocurrencies = getAllCryptocurrencies();
         JSONArray data = (JSONArray) allCryptocurrencies.get("data");
-        for (int i=0; i<data.size(); i++) {
+        for (int i = 0; i < data.size(); i++) {
             JSONObject jsonCryptocurrency = (JSONObject) data.get(i);
             if (jsonCryptocurrency.get("symbol").toString().equalsIgnoreCase(crypto)) {
                 return true;
@@ -175,7 +207,7 @@ public class Bot extends TelegramLongPollingBot {
         if (newMessage.equals("/add")) {
             JSONObject allCryptocurrencies = getAllCryptocurrencies();
             JSONArray data = (JSONArray) allCryptocurrencies.get("data");
-            for (int i=0; i<data.size(); i++) {
+            for (int i = 0; i < data.size(); i++) {
                 JSONObject jsonCryptocurrency = (JSONObject) data.get(i);
                 row.add(new KeyboardButton(jsonCryptocurrency.get("symbol").toString()));
                 if (i % 5 == 0 && i > 0) {
@@ -187,6 +219,42 @@ public class Bot extends TelegramLongPollingBot {
         } else if (chatsState.get(chatId) != null && chatsState.get(chatId).getState() instanceof AddCoinState) {
             row.add(new KeyboardButton("price"));
             row.add(new KeyboardButton("market_cap"));
+            keyboard.add(row);
+        } else if (newMessage.equals("/remove")) {
+            JSONObject allSubscriptions = Subscriptions.getJsonContent();
+            JSONArray data = (JSONArray) allSubscriptions.get("data");
+            for (int i = 0; i < data.size(); i++) {
+                JSONObject chatSubscriptions = (JSONObject) data.get(i);
+                if (chatSubscriptions.get("chatId").toString().equals(chatId)) {
+                    JSONArray subscriptions = (JSONArray) chatSubscriptions.get("subscriptions");
+                    for (int j=0; j<subscriptions.size(); j++) {
+                        JSONObject subscription = (JSONObject) subscriptions.get(j);
+                        row.add(new KeyboardButton(subscription.get("symbol").toString()));
+                        if (j % 5 == 0 && j > 0) {
+                            keyboard.add(row);
+                            row = new KeyboardRow();
+                        }
+                    }
+                }
+            }
+            keyboard.add(row);
+        } else if (chatsState.get(chatId) != null && chatsState.get(chatId).getState() instanceof RemoveCoinState) {
+            JSONObject allSubscriptions = Subscriptions.getJsonContent();
+            JSONArray data = (JSONArray) allSubscriptions.get("data");
+            for (int i = 0; i < data.size(); i++) {
+                JSONObject chatSubscriptions = (JSONObject) data.get(i);
+                if (chatSubscriptions.get("chatId").toString().equals(chatId)) {
+                    JSONArray subscriptions = (JSONArray) chatSubscriptions.get("subscriptions");
+                    for (int j=0; j<subscriptions.size(); j++) {
+                        JSONObject subscription = (JSONObject) subscriptions.get(j);
+                        if (subscription.get("symbol").toString().equals(newMessage)) {
+                            JSONObject usd = (JSONObject) subscription.get("USD");
+                            if (usd.get("price") != null) row.add(new KeyboardButton("price"));
+                            if (usd.get("market_cap") != null) row.add(new KeyboardButton("market_cap"));
+                        }
+                    }
+                }
+            }
             keyboard.add(row);
         }
         replyKeyboardMarkup.setKeyboard(keyboard);

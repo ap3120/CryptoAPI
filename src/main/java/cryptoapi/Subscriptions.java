@@ -27,69 +27,58 @@ public class Subscriptions {
         data.add(chat);
         json.put("data", data);
 
-        try {
-            if (isJson() && ! isEmpty()) {
-                String str = getJsonContent();
-                JSONParser parser = new JSONParser();
-                JSONObject tmpJson = (JSONObject) parser.parse(str);
-                JSONArray tmpData = (JSONArray) tmpJson.get("data");
-                for (Object o : tmpData.toArray()) {
-                    JSONObject tmpChat = (JSONObject) o;
-                    if (tmpChat.get("chatId").equals(chatId)) {
-                        JSONArray tmpChatSubscriptions = (JSONArray) tmpChat.get("subscriptions");
-                        for (Object s : tmpChatSubscriptions.toArray()) {
-                            JSONObject tmpChatSubscription = (JSONObject) s;
-                            if (tmpChatSubscription.get("symbol").equals(symbol)) {
-                                JSONObject tmpUsd = (JSONObject) tmpChatSubscription.get("USD");
-                                tmpUsd.put(type, target);
-                                writeJsonFile(tmpJson);
-                                return "Your subscription for /" + symbol + "/" + type + "/" + target + " was successfully saved.";
-                            }
+        if (isJson() && !isEmpty()) {
+            JSONObject tmpJson = getJsonContent();
+            JSONArray tmpData = (JSONArray) tmpJson.get("data");
+            for (Object o : tmpData.toArray()) {
+                JSONObject tmpChat = (JSONObject) o;
+                if (tmpChat.get("chatId").equals(chatId)) {
+                    JSONArray tmpChatSubscriptions = (JSONArray) tmpChat.get("subscriptions");
+                    for (Object s : tmpChatSubscriptions.toArray()) {
+                        JSONObject tmpChatSubscription = (JSONObject) s;
+                        if (tmpChatSubscription.get("symbol").equals(symbol)) {
+                            JSONObject tmpUsd = (JSONObject) tmpChatSubscription.get("USD");
+                            tmpUsd.put(type, target);
+                            writeJsonFile(tmpJson);
+                            return "Your subscription for /" + symbol + "/" + type + "/" + target + " was successfully saved.";
                         }
-                        tmpChatSubscriptions.add(chatSubscription);
-                        writeJsonFile(tmpJson);
-                        return "Your subscription for /" + symbol + "/" + type + "/" + target + " was successfully saved.";
                     }
+                    tmpChatSubscriptions.add(chatSubscription);
+                    writeJsonFile(tmpJson);
+                    return "Your subscription for /" + symbol + "/" + type + "/" + target + " was successfully saved.";
                 }
-                tmpData.add(chat);
-                writeJsonFile(tmpJson);
-            } else {
-                writeJsonFile(json);
             }
-            return "Your subscription for /" + symbol + "/" + type + "/" + target + " was successfully saved.";
-        } catch (ParseException e) {
-            return "Something went wrong...";
+            tmpData.add(chat);
+            writeJsonFile(tmpJson);
+        } else {
+            writeJsonFile(json);
         }
+        return "Your subscription for /" + symbol + "/" + type + "/" + target + " was successfully saved.";
     }
 
-    public static void remove(String chatId, String symbol, String type) {
-        if (! isJson() || isEmpty()) return;
-        String str = getJsonContent();
-        JSONParser parser = new JSONParser();
-        try {
-            JSONObject json = (JSONObject) parser.parse(str);
-            JSONArray data = (JSONArray) json.get("data");
-            for (Object o : data.toArray()) {
-                JSONObject chat = (JSONObject) o;
-                if (chat.get("chatId").equals(chatId)) {
-                    JSONArray chatSubscriptions = (JSONArray) chat.get("subscriptions");
-                    for (Object s : chatSubscriptions.toArray()) {
-                        JSONObject chatSubscription = (JSONObject) s;
-                        if (chatSubscription.get("symbol").equals(symbol)) {
-                            JSONObject usd = (JSONObject) chatSubscription.get("USD");
-                            usd.remove(type);
-                            if (usd.isEmpty()) chatSubscriptions.remove(chatSubscription);
-                        }
-                    }
-                    if (chatSubscriptions.size() == 0) {
-                        data.remove(chat);
+    public static String remove(String chatId, String symbol, String type) {
+        if (!isJson() || isEmpty()) return "You don't have any subscription.";
+        JSONObject json = getJsonContent();
+        JSONArray data = (JSONArray) json.get("data");
+        for (Object o : data.toArray()) {
+            JSONObject chat = (JSONObject) o;
+            if (chat.get("chatId").equals(chatId)) {
+                JSONArray chatSubscriptions = (JSONArray) chat.get("subscriptions");
+                for (Object s : chatSubscriptions.toArray()) {
+                    JSONObject chatSubscription = (JSONObject) s;
+                    if (chatSubscription.get("symbol").equals(symbol)) {
+                        JSONObject usd = (JSONObject) chatSubscription.get("USD");
+                        usd.remove(type);
+                        if (usd.isEmpty()) chatSubscriptions.remove(chatSubscription);
                     }
                 }
+                if (chatSubscriptions.size() == 0) {
+                    data.remove(chat);
+                }
             }
-            writeJsonFile(json);
-        } catch (ParseException e) {
-            throw new RuntimeException(e);
         }
+        writeJsonFile(json);
+        return "Your subscription for /" + symbol + "/" + type + " has been removed.";
     }
 
     public static void writeJsonFile(JSONObject json) {
@@ -103,7 +92,7 @@ public class Subscriptions {
         }
     }
 
-    public static String getJsonContent() {
+    public static JSONObject getJsonContent() {
         try {
             StringBuilder stringBuilder = new StringBuilder();
             BufferedReader bufferedReader = new BufferedReader(new FileReader("subscriptions.json"));
@@ -111,21 +100,20 @@ public class Subscriptions {
             while ((content = bufferedReader.readLine()) != null) {
                 stringBuilder.append(content);
             }
-            return stringBuilder.toString();
+            JSONParser jsonParser = new JSONParser();
+            JSONObject jsonObject = (JSONObject) jsonParser.parse(stringBuilder.toString());
+            return jsonObject;
         } catch (IOException e) {
             throw new RuntimeException(e);
-        }
-    }
-    public static boolean isEmpty() {
-        try {
-            String str = getJsonContent();
-            JSONParser jsonParser = new JSONParser();
-            JSONObject jsonObject = (JSONObject) jsonParser.parse(str);
-            JSONArray jsonArray = (JSONArray) jsonObject.get("data");
-            if (jsonArray.size() > 0) return false;
         } catch (ParseException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public static boolean isEmpty() {
+        JSONObject jsonObject = getJsonContent();
+        JSONArray jsonArray = (JSONArray) jsonObject.get("data");
+        if (jsonArray != null && !jsonArray.isEmpty()) return false;
         return true;
     }
 
