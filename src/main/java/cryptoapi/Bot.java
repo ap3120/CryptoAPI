@@ -26,6 +26,12 @@ public class Bot extends TelegramLongPollingBot {
     private static String BOT_USERNAME = dotenv.get("TELEGRAM_BOT_USERNAME");
     private static HashMap<String, Chat> chatsState = new HashMap<>();
 
+    /**
+     * Sends a message when the chat is updated.
+     * Specifies a custom keyboard on certain conditions to help the user reply.
+     *
+     * @param update - an Update received by the bot
+     */
     @Override
     public void onUpdateReceived(Update update) {
         if (update.hasMessage() && update.getMessage().hasText()) {
@@ -136,6 +142,13 @@ public class Bot extends TelegramLongPollingBot {
         }
     }
 
+    /**
+     * Sends a message to a chat
+     *
+     * @param chatId - the chat identifier
+     * @param s - the message to send
+     * @returns void
+     */
     public synchronized void sendMsg(String chatId, String s) {
         SendMessage sendMessage = new SendMessage();
         sendMessage.enableMarkdown(true);
@@ -148,6 +161,11 @@ public class Bot extends TelegramLongPollingBot {
         }
     }
 
+    /**
+     * Returns an json object containing data on cryptocurrencies
+     *
+     * @returns allCryptocurrencies - json object with cryptocurrency data
+     */
     private JSONObject getAllCryptocurrencies() {
         JSONObject allCryptocurrencies = CmcAPI.getCmcJson();
         if (allCryptocurrencies == null) {
@@ -157,6 +175,13 @@ public class Bot extends TelegramLongPollingBot {
         return allCryptocurrencies;
     }
 
+    /**
+     * Verifies if a chat subscriptions contains a token
+     *
+     * @param crypto - the token
+     * @param chatId - the chat identifier
+     * @returns Boolean result
+     */
     private boolean isCryptoInSubscriptions(String crypto, String chatId) {
         JSONObject allSubscriptions = Subscriptions.getJsonContent();
         JSONArray data = (JSONArray) allSubscriptions.get("data");
@@ -173,6 +198,12 @@ public class Bot extends TelegramLongPollingBot {
         return false;
     }
 
+    /**
+     * Verifies if an array of tokens contains a specific token
+     *
+     * @param crypto - the token
+     * @returns Boolean result
+     */
     private boolean isCryptoInArray(String crypto) {
         JSONObject allCryptocurrencies = getAllCryptocurrencies();
         JSONArray data = (JSONArray) allCryptocurrencies.get("data");
@@ -185,16 +216,35 @@ public class Bot extends TelegramLongPollingBot {
         return false;
     }
 
+    /**
+     * Verifies if the quote sent by a user is valid
+     *
+     * @param type - the quote
+     * @returns Boolean result
+     */
     private boolean isTypeValid(String type) {
         return (type.equals("price") || type.equals("market_cap"));
     }
 
+    /**
+     * Verifies if the target sent by a user is a number
+     *
+     * @param target - the value sent by a user
+     * @returns Boolean result
+     */
     private boolean isTargetValid(String target) {
         Pattern isNumeric = Pattern.compile("-?\\d+(\\.\\d+)?");
         if (target == null) return false;
         return isNumeric.matcher(target).matches();
     }
 
+    /**
+     * Creates and attaches a custom keyboard to the bot message
+     *
+     * @param sendMessage - the last message sent by a user
+     * @param newMessage - the message to be sent along with the custom keyboard
+     * @param chatId - the chat identifier
+     */
     public synchronized void setButtons(SendMessage sendMessage, String newMessage, String chatId) {
         ReplyKeyboardMarkup replyKeyboardMarkup = new ReplyKeyboardMarkup();
         sendMessage.setReplyMarkup(replyKeyboardMarkup);

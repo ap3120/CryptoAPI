@@ -35,6 +35,9 @@ public class CmcAPI implements Runnable {
         this.bot = bot;
     }
 
+    /**
+     * Dispatches alerts to chats with subscriptions every 15 minutes
+     */
     @Override
     public void run() {
         while (true) {
@@ -53,6 +56,9 @@ public class CmcAPI implements Runnable {
         }
     }
 
+    /**
+     * Checks chats subscriptions and send alert messages
+     */
     private void dispatchAlerts() {
         JSONObject allSubscriptions = Subscriptions.getJsonContent();
         JSONArray data = (JSONArray) allSubscriptions.get("data");
@@ -83,6 +89,12 @@ public class CmcAPI implements Runnable {
             }
         }
     }
+
+    /**
+     * Returns a json with cryptocurrency data
+     *
+     * @returns json data
+     */
     public static JSONObject getCryptocurrency() {
         JSONObject json = new JSONObject();
 
@@ -107,6 +119,14 @@ public class CmcAPI implements Runnable {
         return json;
     }
 
+    /**
+     * Makes an api call and returns the result
+     *
+     * @param uri - the api endpoint uri
+     * @param parameters - api request parameters
+     * @param key - the api key
+     * @returns a result string
+     */
     public static String makeAPICall(String uri, List<NameValuePair> parameters, String key) throws URISyntaxException, IOException {
         System.out.println("cmc api called");
         String response_content = "";

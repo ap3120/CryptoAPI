@@ -10,6 +10,15 @@ import java.nio.file.Path;
 
 public class Subscriptions {
 
+    /**
+     * Adds a subscription to a chat
+     *
+     * @param chatId - the chat identifier
+     * @param symbol - the token
+     * @param type - the quote
+     * @param target - the threshold value
+     * @returns a success message when the subscription is added
+     */
     public static String add(String chatId, String symbol, String type, String target) {
         JSONObject json = new JSONObject();
         JSONArray data = new JSONArray();
@@ -56,6 +65,14 @@ public class Subscriptions {
         return "Your subscription was saved. You will get an alert when " + symbol + " reaches a " + type + " of $ " + target;
     }
 
+    /**
+     * Removes a subscription
+     *
+     * @param chatId - the chat identifier
+     * @param symbol - the token to remove
+     * @param type - the quote to remove
+     * @returns a success message when the subscription is removed
+     */
     public static String remove(String chatId, String symbol, String type) {
         if (!isJson() || isEmpty()) return "You don't have any subscription.";
         JSONObject json = getJsonContent();
@@ -81,6 +98,11 @@ public class Subscriptions {
         return "Your subscription for /" + symbol + "/" + type + " has been removed.";
     }
 
+    /**
+     * Writes the subscriptions.json file
+     *
+     * @param json - the json object to stringify and to write in the subscriptions file
+     */
     public static void writeJsonFile(JSONObject json) {
         String str = json.toJSONString();
         try {
@@ -92,6 +114,11 @@ public class Subscriptions {
         }
     }
 
+    /**
+     * Returns a json from the subscriptions.json file
+     *
+     * @returns the json object
+     */
     public static JSONObject getJsonContent() {
         try {
             StringBuilder stringBuilder = new StringBuilder();
@@ -110,6 +137,11 @@ public class Subscriptions {
         }
     }
 
+    /**
+     * Verifies if the subscriptions file is empty
+     *
+     * @return Boolean result
+     */
     public static boolean isEmpty() {
         JSONObject jsonObject = getJsonContent();
         JSONArray jsonArray = (JSONArray) jsonObject.get("data");
@@ -117,6 +149,11 @@ public class Subscriptions {
         return true;
     }
 
+    /**
+     * Verifies if the subscriptions file exists
+     *
+     * @returns Boolean result
+     */
     public static boolean isJson() {
         File file = new File("subscriptions.json");
         return file.isFile();
