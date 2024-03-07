@@ -26,6 +26,7 @@ public class Subscriptions {
         JSONArray chatSubscriptions = new JSONArray();
         JSONObject chatSubscription = new JSONObject();
         JSONObject usd = new JSONObject();
+        String response = "Your subscription was saved. You will get an alert when " + symbol + " reaches a " + type + " of $ " + target;
 
         usd.put(type, target);
         chatSubscription.put("symbol", symbol);
@@ -49,12 +50,12 @@ public class Subscriptions {
                             JSONObject tmpUsd = (JSONObject) tmpChatSubscription.get("USD");
                             tmpUsd.put(type, target);
                             writeJsonFile(tmpJson);
-                            break;
+                            return response;
                         }
                     }
                     tmpChatSubscriptions.add(chatSubscription);
                     writeJsonFile(tmpJson);
-                    break;
+                    return response;
                 }
             }
             tmpData.add(chat);
@@ -62,7 +63,7 @@ public class Subscriptions {
         } else {
             writeJsonFile(json);
         }
-        return "Your subscription was saved. You will get an alert when " + symbol + " reaches a " + type + " of $ " + target;
+        return response;
     }
 
     /**
